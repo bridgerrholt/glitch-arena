@@ -69,7 +69,7 @@ B0  30.87 1117.67
   return noteFrequencies;
 };
 
-var WAVE_FORMAT_PCM  = 0x0001
+var WAVE_FORMAT_PCM  = 0x0001;
 var NOTE_FREQUENCIES = calculateNoteFrequencies();
 
 var REST_TOKEN = 'R';
@@ -140,7 +140,7 @@ var AudioEncoder = function(bpm, markupChannels) {
   this.noteFrequencies = calculateNoteFrequencies();
 
   this.audio           = this.encode();
-}
+};
 
 AudioEncoder.prototype.encode = function() {
   this.chunks = [];
@@ -195,127 +195,127 @@ AudioEncoder.prototype.encode = function() {
     bs.push(0x00);
 
   return new Audio('data:audio/wav;base64,' + base64(bs));
-}
+};
 
-  AudioEncoder.prototype.encodePart = function() {
-    var noteCollection = [];
-    var addTo = false;
+AudioEncoder.prototype.encodePart = function() {
+  var noteCollection = [];
+  var addTo = false;
 
-    var s = this.markupChannels[this.channel];
-    this.index = this.channel;
+  var s = this.markupChannels[this.channel];
+  this.index = this.channel;
 
-    for (var i = 0; i < s.length; ++i) {
-      if (s[i] == '|') {
-        addTo = true;
-        ++i;
-      }
-
-      var note = s[i];
-      var frequency = 0;
-
-      if (note != REST_TOKEN) {
-        ++i;
-        if (s[i] == '#' || s[i] == 'b') {
-          note += s[i];
-          ++i;
-        }
-
-        var octave = parseInt(s[i]);
-
-        frequency = NOTE_FREQUENCIES[note] * Math.pow(2, octave);
-      }
-
-      // Skip over the ':' indicator.
-      i += 2;
-
-
-      // The denominator of the note type.
-      var type = s[i];
-
+  for (var i = 0; i < s.length; ++i) {
+    if (s[i] == '|') {
+      addTo = true;
       ++i;
+    }
 
-      while (s[i] != ' ' && s[i] != '|' && i < s.length) {
-        type += s[i];
+    var note = s[i];
+    var frequency = 0;
+
+    if (note != REST_TOKEN) {
+      ++i;
+      if (s[i] == '#' || s[i] == 'b') {
+        note += s[i];
         ++i;
       }
 
-      var duration = this.noteDuration / parseInt(type);
+      var octave = parseInt(s[i]);
 
-      if (addTo) {
-        noteCollection.push(frequency)
-
-        if (s[i] == '|') {
-          addTo = false;
-          var sum = noteCollection.reduce(function(a, b) { return a + b; });
-          frequency = sum / noteCollection.length;
-          noteCollection = [];
-          ++i;
-        }
-      }
-      
-      if (!addTo) {
-        this.encodeNote(frequency, duration);
-      }
-
-      console.log(note);
-    }
-  }
-
-  AudioEncoder.prototype.encodeNote = function(frequency, duration) {
-    //console.log([frequency, duration]);
-    var period = 1.0 / frequency;
-
-    // var SamplesPerPeriod = Math.floor(duration * period);
-
-    var dataPointCount = Math.floor(this.sampleRate * duration);
-    // var pointCoefficient = 2.0 * Math.PI * frequency * sampleDuration;
-
-    for (var i = 0; i < dataPointCount; i++) {
-      switch (this.waveType) {
-        /*case 'Sine':
-          data.push(Math.floor(127.5 * Math.sin(i * pointCoefficient) + 127.5));
-          break;
-        case 'Square':
-          data.push(Math.floor(127.5 * square(i * pointCoefficient) + 127.5));
-          break;
-        case 'Triangle':
-          data.push(Math.floor(127.5 * tri(i * sampleDuration, period) + 127.5));
-          break;*/
-        case 'Sawtooth':
-          //console.log(i);
-          this.addData(Math.floor(127.5 * saw(i * this.sampleDuration, period) + 127.5)*2);
-          break;
-      }
-    }
-  }
-
-  AudioEncoder.prototype.addData = function(value) {
-    var length = this.chunks.length;
-    while (length <= this.index) {
-      //console.log([this.chunks.length, this.index]);
-      this.chunks.push(0);
-      ++length;
+      frequency = NOTE_FREQUENCIES[note] * Math.pow(2, octave);
     }
 
-    this.chunks[this.index] = this.adjustForVolume(value);
-    if (this.datas.length <= this.channel)
-      this.datas.push([]);
-    this.datas[this.channel].push(this.adjustForVolume(value));
-    //console.log("done");
+    // Skip over the ':' indicator.
+    i += 2;
 
-    this.index += this.channelCount;
+
+    // The denominator of the note type.
+    var type = s[i];
+
+    ++i;
+
+    while (s[i] != ' ' && s[i] != '|' && i < s.length) {
+      type += s[i];
+      ++i;
+    }
+
+    var duration = this.noteDuration / parseInt(type);
+
+    if (addTo) {
+      noteCollection.push(frequency);
+
+      if (s[i] == '|') {
+        addTo = false;
+        var sum = noteCollection.reduce(function(a, b) { return a + b; });
+        frequency = sum / noteCollection.length;
+        noteCollection = [];
+        ++i;
+      }
+    }
+
+    if (!addTo) {
+      this.encodeNote(frequency, duration);
+    }
+
+    console.log(note);
+  }
+};
+
+AudioEncoder.prototype.encodeNote = function(frequency, duration) {
+  //console.log([frequency, duration]);
+  var period = 1.0 / frequency;
+
+  // var SamplesPerPeriod = Math.floor(duration * period);
+
+  var dataPointCount = Math.floor(this.sampleRate * duration);
+  // var pointCoefficient = 2.0 * Math.PI * frequency * sampleDuration;
+
+  for (var i = 0; i < dataPointCount; i++) {
+    switch (this.waveType) {
+      /*case 'Sine':
+        data.push(Math.floor(127.5 * Math.sin(i * pointCoefficient) + 127.5));
+        break;
+      case 'Square':
+        data.push(Math.floor(127.5 * square(i * pointCoefficient) + 127.5));
+        break;
+      case 'Triangle':
+        data.push(Math.floor(127.5 * tri(i * sampleDuration, period) + 127.5));
+        break;*/
+      case 'Sawtooth':
+        //console.log(i);
+        this.addData(Math.floor(127.5 * saw(i * this.sampleDuration, period) + 127.5)*2);
+        break;
+    }
+  }
+};
+
+AudioEncoder.prototype.addData = function(value) {
+  var length = this.chunks.length;
+  while (length <= this.index) {
+    //console.log([this.chunks.length, this.index]);
+    this.chunks.push(0);
+    ++length;
   }
 
-  AudioEncoder.prototype.adjustForVolume = function(value) {
-    /*var toReturn = Math.pow(10, (-48 + 54 * this.volume / 100.0) / 20.0) * value;
-    console.log(toReturn);
-    console.log(value);
-    return toReturn;*/
-    //return value*this.volume;
-    var toReturn = Math.pow(2.0, this.volume / 6.014) * value;
-    //console.log(toReturn);
-    return toReturn;
-  }
+  this.chunks[this.index] = this.adjustForVolume(value);
+  if (this.datas.length <= this.channel)
+    this.datas.push([]);
+  this.datas[this.channel].push(this.adjustForVolume(value));
+  //console.log("done");
+
+  this.index += this.channelCount;
+};
+
+AudioEncoder.prototype.adjustForVolume = function(value) {
+  /*var toReturn = Math.pow(10, (-48 + 54 * this.volume / 100.0) / 20.0) * value;
+  console.log(toReturn);
+  console.log(value);
+  return toReturn;*/
+  //return value*this.volume;
+  var toReturn = Math.pow(2.0, this.volume / 6.014) * value;
+  //console.log(toReturn);
+  return toReturn;
+};
 
 /*var audios = [];
 audios.push('R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 R:1 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16 A6:16 R:16 D6:16 R:16 A6:16 R:16 D6:16 R:16 G6:16 R:16 C6:16 R:16 G6:16 R:16 B5:16 R:16');
