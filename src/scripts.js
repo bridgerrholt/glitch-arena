@@ -127,7 +127,11 @@ RgbColor.prototype.get = function() {
 
 
 function randomRange(min, max) {
-  return Math.floor(Math.random() * (max + 1 - min) + min); 
+  return Math.floor(Math.random() * (max + 1 - min) + min);
+}
+
+function randomRangeReal(min, max) {
+  return Math.random() * (max + 1 - min) + min;
 }
 
 function loopCall(arr, functionName) {

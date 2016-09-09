@@ -1,7 +1,8 @@
 Level = function() {
 	this.objects = [];
 
-	this.objects.push(new Level.Orb(0, 0));
+	this.pushObject(Level.Orb);
+	this.pushObject(Level.Key);
 };
 
 Level.prototype.update = function() {
@@ -14,17 +15,24 @@ Level.prototype.draw = function() {
 	}
 };
 
+Level.prototype.pushObject = function(constructFunc) {
+	var dir = randomRangeReal(0, trig.TAU);
+	var dis = randomRange(2000, 5000);
+
+	this.objects.push(new constructFunc(trig.move(0, 0, dir, dis)));
+};
 
 
-Level.Object = function(x, y, radius) {
-	this.pos = new trig.Coord(x, y);
+
+Level.Object = function(pos, radius) {
+	this.pos = pos;
 	this.radius = radius;
 };
 
 
 
-Level.Key = function(x, y) {
-	this.data = new Level.Object(x, y, 50);
+Level.Key = function(pos) {
+	this.data = new Level.Object(pos, 50);
 
 	this.getTag = function() {
 		return "key";
@@ -49,8 +57,8 @@ Level.Key = function(x, y) {
 
 
 
-Level.Orb = function(x, y) {
-	this.data = new Level.Object(x, y, 25);
+Level.Orb = function(pos) {
+	this.data = new Level.Object(pos, 25);
 
 	this.getTag = function() {
 		return "orb";

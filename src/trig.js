@@ -82,7 +82,7 @@ trig.moveY = function(radians, distance) {
 
 
 trig.move = function(x, y, radians, distance) {
-  return new Coord(
+  return new trig.Coord(
     x + trig.moveX(radians, distance),
     y + trig.moveY(radians, distance)
   );
