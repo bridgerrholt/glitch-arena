@@ -109,12 +109,12 @@ Player.prototype.draw = function() {
 	for (i = 0; i < g_g.level.objects.length; ++i) {
 		//console.log(g_g.level.objects[i].getTag());
 		var obj = g_g.level.objects[i];
-		var disTo = this.pos.disTo(obj.pos);
+		var disTo = this.pos.disTo(obj.data.pos);
 		// Will actually be drawn.
 		if (disTo > radiusDisappear) {
 			var radius;
 			var opacity = 1.0;
-			var dirTo = this.pos.dirTo(obj.pos);
+			var dirTo = this.pos.dirTo(obj.data.pos);
 
 			// Smallest size.
 			if (disTo > radiusGrow) {
@@ -134,13 +134,22 @@ Player.prototype.draw = function() {
 				opacity = ratio;
 			}
 
-			g_g.ctx.beginPath();
+			/*g_g.ctx.beginPath();
 			var pos = this.pos.calcSub(g_g.camera);
 			pos.move(dirTo, distance);
 			g_g.ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
 			g_g.ctx.globalAlpha = opacity;
 			g_g.ctx.fillStyle = "#fff";
-			g_g.ctx.fill();
+			g_g.ctx.fill();*/
+
+			var pos = this.pos.calcSub(g_g.camera);
+			pos.move(dirTo, distance);
+
+			obj.drawIcon(pos, radius, function() {
+				g_g.ctx.globalAlpha = opacity;
+				g_g.ctx.fillStyle = "#fff";
+				g_g.ctx.strokeStyle = "#fff";
+			}.bind(opacity));
 
 			g_g.ctx.globalAlpha = 1.0;
 		}
