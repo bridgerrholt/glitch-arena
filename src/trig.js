@@ -4,8 +4,16 @@ trig.TAU = 2 * Math.PI;
 
 // Coord
 trig.Coord = function(x, y) {
-  this.x = x;
-  this.y = y;
+  this.moveTo(x, y);
+};
+
+trig.Coord.prototype.moveTo = function(x, y) {
+	this.x = x;
+	this.y = y;
+};
+
+trig.Coord.prototype.resetPos = function(coord) {
+	this.moveTo(coord.x, coord.y);
 };
 
 trig.Coord.prototype.move = function(radians, distance) {
@@ -59,6 +67,11 @@ trig.toRads = function(degrees) {
 
 trig.toDegs = function(radians) {
   return 180 / Math.PI * radians;
+};
+
+trig.dirWithin = function(radians, margin) {
+	return (Math.abs(radians)            <= margin ||
+		      Math.abs(radians + trig.TAU) <= margin);
 };
 
 

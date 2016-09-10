@@ -15,10 +15,14 @@ drawing.calcShouldDraw = function(coord, halfWidth, halfHeight) {
 	        drawing.calcShouldDrawY(coord.y, halfHeight));
 };
 
+drawing.calcShouldDrawCircle = function(coord, radius) {
+	return drawing.calcShouldDraw(coord, radius, radius);
+};
+
 // Doesn't actually draw, just strokes the arc. drawFunc is called after the arc.
 drawing.drawCircle = function(coord, radius, drawFunc) {
 	var fullRadius = radius + g_g.ctx.lineWidth / 2.0;
-	if (drawing.calcShouldDraw(coord, fullRadius, fullRadius)) {
+	if (drawing.calcShouldDrawCircle(coord, fullRadius)) {
 		drawing.drawCircleForced(coord, radius);
 		drawFunc();
 	}

@@ -4,8 +4,8 @@ function main() {
   // Frame rate.
   g_g.frameRate = 60;
   g_g.fps       = g_g.frameRate;
-  g_g.lastTick  = new Date;
-  g_g.thisTick  = new Date;
+	g_g.thisTick  = new Date().getTime();
+  g_g.lastTick  = g_g.thisTick;
   g_g.delta     = 60/g_g.frameRate;
 
   // The game canvas.
@@ -19,13 +19,38 @@ function main() {
   g_g.camera = new trig.Coord(0, 0);
 
   g_g.mouse = new trig.Coord(0, 0);
+	g_g.mouseButtons = { left:  new Key(),
+		                   right: new Key() };
+	g_g.keys = [];
+	for (var i = 0; i < 222; ++i) {
+		g_g.keys.push(new Key());
+	}
+	g_g.keyBinds = {
+		spacebar: 32
+	};
 
   g_g.glitchness = {
     val: 1,
+	  callbacks: [],
 
-    inc: function(amount) {
-      this.val += amount;
-    },
+	  inc: function() {
+		  this.incAmount(1);
+	  },
+
+	  incAmount: function(amount) {
+		  this.val += amount;
+		  for (var i = 0; i < this.callbacks.length; ++i) {
+		  	this.callbacks[i][0](this.callbacks[i][1]);
+		  }
+		  amount--;
+
+		  if (amount > 0)
+		  	this.incAmount(amount);
+	  },
+
+	  addCallback: function(callback) {
+	  	this.callbacks.push(callback);
+	  },
 
     reset: function() {
       this.val = 1;
@@ -53,6 +78,13 @@ function main() {
 }
 
 function update() {
+	g_g.thisTick = new Date().getTime();
+	g_g.fps = 1000/(g_g.thisTick-g_g.lastTick);
+	if (g_g.fps == 0)
+		g_g.delta = 0;
+	else
+		g_g.delta = 60 / g_g.fps;
+
   g_g.particleSystem.update();
   g_g.player.update();
   g_g.level.update();
@@ -79,17 +111,30 @@ function update() {
   g_g.particleSystem.draw();
   g_g.level.draw();
   g_g.player.draw();
+
+	// Draw bounds barrier.
+	drawing.drawCircleForced(g_g.center.calcSub(g_g.camera), g_g.boundsDistance + 4);
+	g_g.ctx.strokeStyle = "#0af";
+	g_g.ctx.lineWidth   = 6;
+	g_g.ctx.stroke();
+	g_g.ctx.lineWidth   = 1;
+
+	g_g.mouseButtons.left.update();
+	g_g.mouseButtons.right.update();
+	loopCall(g_g.keys, "update");
+
+	g_g.lastTick = g_g.thisTick;
 }
 
 function reset() {
+	g_g.center         = new trig.Coord(0, 0);
+	g_g.boundsDistance = 5000;
+
   g_g.player = new Player();
   g_g.particleSystem = new ParticleSystem();
   g_g.level = new Level();
   g_g.glitchness.reset();
-}
 
-function setInputCallbacks() {
-  
 }
 
 function loadMedia() {
@@ -113,6 +158,18 @@ function realY(y) {
   return y + g_g.camera.y;
 }
 
+
+function stayInGameBounds(coord, radius) {
+	if (checkOutGameBounds(coord, radius)) {
+		var dir = g_g.center.dirTo(coord);
+		coord.resetPos(g_g.center.calcMove(dir, g_g.boundsDistance - radius));
+	}
+}
+
+function checkOutGameBounds(coord, radius) {
+	return (g_g.center.disTo(coord) + radius > g_g.boundsDistance);
+}
+
 // Common
 
 RgbColor = function(r, g, b) {
@@ -127,11 +184,13 @@ RgbColor.prototype.get = function() {
 
 
 function randomRange(min, max) {
-  return Math.floor(Math.random() * (max + 1 - min) + min);
+  //return Math.floor(Math.random() * (max - min) + min);
+	return Math.floor(randomRangeReal(min, max));
+  //return Math.floor(min + (Math.random() % Math.floor((max - min + 1))));
 }
 
 function randomRangeReal(min, max) {
-  return Math.random() * (max + 1 - min) + min;
+  return Math.random() * (max - min) + min;
 }
 
 function loopCall(arr, functionName) {
@@ -143,15 +202,75 @@ function loopCall(arr, functionName) {
 
 
 // Events
-document.addEventListener("mousemove", function(evt) {
-  var rect = g_g.canvas.getBoundingClientRect();
-  g_g.mouse.x = evt.clientX-rect.left;
-  g_g.mouse.y = evt.clientY-rect.top;
-  //var message = 'Mouse position: ' + g_g.mouse.x + ',' + g_g.mouse.y;
-  //console.log(message);
-}, false);
+
+Key = function() {
+	this.pressed  = false;
+	this.released = false;
+	this.down     = false;
+};
+
+Key.prototype.press = function() {
+	if (this.down == false) {
+		this.pressed = true;
+		this.down    = true;
+	}
+};
+
+Key.prototype.release = function() {
+	this.released = true;
+	this.down     = false;
+};
+
+Key.prototype.update = function() {
+	this.pressed  = false;
+	this.released = false;
+};
 
 
+function getMouseButtonIsLeft(num) {
+	var left = (navigator.appName == "Microsoft Internet Explorer") ? 1 : 0;
+	return (num == left);
+}
+
+
+
+function setInputCallbacks() {
+	document.addEventListener("mousemove", function (evt) {
+		var rect = g_g.canvas.getBoundingClientRect();
+		g_g.mouse.x = evt.clientX - rect.left;
+		g_g.mouse.y = evt.clientY - rect.top;
+		//var message = 'Mouse position: ' + g_g.mouse.x + ',' + g_g.mouse.y;
+		//console.log(message);
+	}, false);
+
+
+	document.onmousedown = function (e) {
+		if (getMouseButtonIsLeft(e.button)) {
+			g_g.mouseButtons.left.press();
+		}
+		else {
+			g_g.mouseButtons.right.press();
+		}
+	};
+
+	document.onmouseup = function (e) {
+		if (getMouseButtonIsLeft(e.button)) {
+			g_g.mouseButtons.left.release();
+		}
+		else {
+			g_g.mouseButtons.right.release();
+		}
+	};
+
+	document.onkeydown = function (e) {
+		g_g.keys[e.which].press();
+	};
+
+	document.onkeyup = function (e) {
+		g_g.keys[e.which].release();
+	};
+
+}
 
 // Must be at bottom.
 main();
