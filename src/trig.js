@@ -21,6 +21,10 @@ trig.Coord.prototype.move = function(radians, distance) {
   this.y += trig.moveY(radians, distance);
 };
 
+trig.Coord.prototype.moveDelta = function(radians, distance) {
+	this.move(radians, distance * g_g.delta);
+};
+
 trig.Coord.prototype.calcMove = function(radians, distance) {
   return new trig.Coord(
     this.x + trig.moveX(radians, distance),
@@ -40,6 +44,10 @@ trig.Coord.prototype.disTo = function(otherCoord) {
   return trig.disTo(this.x, this.y, otherCoord.x, otherCoord.y);
 };
 
+trig.Coord.prototype.collidingCircles = function(thisRadius, otherCoord, otherRadius) {
+	return (this.disTo(otherCoord) <= thisRadius + otherRadius);
+};
+
 trig.Coord.prototype.add = function(otherCoord) {
   this.x += otherCoord.x;
   this.y += otherCoord.y;
@@ -57,6 +65,15 @@ trig.Coord.prototype.calcSub = function(otherCoord) {
     this.x - otherCoord.x,
     this.y - otherCoord.y
   );
+};
+
+
+// Rect
+
+trig.Rect = function(position, width, height) {
+	this.pos = position;
+	this.width = width;
+	this.height = height;
 };
 
 
@@ -128,4 +145,9 @@ trig.normalizeDir = function(radians) {
 		radians += trig.TAU;
 
 	return radians;
+};
+
+
+trig.randomDir = function() {
+	return randomRangeReal(0, trig.TAU);
 };

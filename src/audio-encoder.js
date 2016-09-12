@@ -153,8 +153,8 @@ AudioEncoder.prototype.encode = function() {
   var channelBytes = this.sampleSize * this.channelCount;
   var chunkSize    = channelBytes * blockCount;
 
-  console.log(this.chunks);
-  console.log(this.datas);
+  //console.log(this.chunks);
+  //console.log(this.datas);
 
   var pad = (blockCount % 2 == 1) ? ' ': '';
   // http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
@@ -257,7 +257,7 @@ AudioEncoder.prototype.encodePart = function() {
       this.encodeNote(frequency, duration);
     }
 
-    console.log(note);
+    //console.log(note);
   }
 };
 

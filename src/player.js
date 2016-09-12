@@ -4,8 +4,15 @@ Player = function() {
 
 	this.pos = new trig.Coord(0, 0);
 	this.dir = 0;
+	this.dirFacing = 0;
 	this.speed = 6;
 	this.speedRotate = trig.TAU / 60;
+
+	this.hpMax = 5;
+	this.hp = this.hpMax;
+	this.lastHit = new Date().getTime();
+	this.hitCooldown = 500;
+	this.inHit = false;
 
 	this.keyCount = 0;
 	this.upgradeCount = 0;
@@ -28,10 +35,15 @@ Player = function() {
 	this.bullets = [];
 	this.bulletSpeed = this.speed+10;
 	this.bulletRadius = 5;
+	this.bulletDamage = 1;
 
-	console.log(this.mouthPoint);
-	console.log(this.offsetMax);
-	console.log(this.points);
+	this.upgradeName = "";
+	this.lastUpgrade = 0;
+	this.upgradeDrawTime = 5 * 1000;
+
+	//console.log(this.mouthPoint);
+	//console.log(this.offsetMax);
+	//console.log(this.points);
 };
 
 
@@ -40,37 +52,44 @@ Player.prototype.update = function() {
 
 	if (realPos.disTo(g_g.mouse) > this.radius) {
 		var toMouse = realPos.dirTo(g_g.mouse);
-		var deltaDir = toMouse - this.dir;
+		var deltaDir = toMouse - this.dirFacing;
+		var speedDelta = this.speedRotate * g_g.delta;
 
-		if (Math.abs(deltaDir) <= this.speedRotate ||
-			  Math.abs(deltaDir + trig.TAU) <= this.speedRotate) {
-			this.dir = toMouse;
+		if (Math.abs(deltaDir) <= speedDelta ||
+			  Math.abs(deltaDir + trig.TAU) <= speedDelta) {
+			this.dirFacing = toMouse;
 		}
 
 		else {
 			if ((deltaDir + trig.TAU) % trig.TAU > Math.PI)
-				this.dir -= this.speedRotate;
+				this.dirFacing -= speedDelta;
 			else
-				this.dir += this.speedRotate;
+				this.dirFacing += speedDelta;
 
-			this.dir = trig.normalizeDir(this.dir);
+			this.dirFacing = trig.normalizeDir(this.dirFacing);
+
 		}
 	}
 
 
-	this.pos.move(this.dir, this.speed * g_g.delta);
+	if (!g_g.keys[g_g.keyBinds.shift].down)
+		this.dir = this.dirFacing;
+
+
+	this.pos.moveDelta(this.dir, this.speed);
 	stayInGameBounds(this.pos, this.radius);
 
 	for (var i = 0; i < this.bullets.length; ++i) {
 		if (this.bullets[i].update()) {
 			this.bullets.splice(i, 1);
-			console.log("Delete bullet");
 		}
 	}
 
+	// Used for shooting and for last hit.
+	var time = new Date().getTime();
+
 	if (this.canShoot) {
 		if (g_g.keys[g_g.keyBinds.spacebar].down || g_g.mouseButtons.left.down) {
-			var time = new Date().getTime();
 			if (this.lastShoot + this.shootInterval < time) {
 				this.lastShoot = time;
 				this.shoot();
@@ -82,6 +101,10 @@ Player.prototype.update = function() {
 	this.offset += Math.PI / 200 * (g_g.glitchness.val * 0.5);
 	if (this.offset >= this.offsetMax) {
 		this.offset -= this.offsetMax;
+	}
+
+	if (time > this.lastHit + this.hitCooldown) {
+		this.inHit = false;
 	}
 };
 
@@ -102,13 +125,18 @@ Player.prototype.draw = function() {
 
 	currentPoints.push(this.pos);
 
-	currentPoints.push(this.radial(Math.PI + (Math.PI-(this.mouthPoint))));
+	var mouthPointOpposite = Math.PI + (Math.PI-(this.mouthPoint));
+
+	currentPoints.push(this.radial(mouthPointOpposite));
 
 	for (i = this.points.length-1; i >= 0; --i) {
 		currentPoints.push(this.radial(Math.PI + (Math.PI-(calcPoint(i)))));
 	}
 
-	g_g.ctx.strokeStyle = "#fff";
+	if (this.inHit)
+		g_g.ctx.strokeStyle = "#f00";
+	else
+		g_g.ctx.strokeStyle = "#000";
 	g_g.ctx.fillStyle = "#fff";
 	g_g.ctx.lineWidth = 1;
 	g_g.ctx.beginPath();
@@ -119,6 +147,25 @@ Player.prototype.draw = function() {
 	g_g.ctx.lineTo(screenX(currentPoints[0].x), screenY(currentPoints[0].y));
 	g_g.ctx.fill();
 	g_g.ctx.stroke();
+
+
+
+	/*var hpStart = this.mouthPoint;
+	var hpEnd   = mouthPointOpposite;
+	var hpDiff  = hpEnd - hpStart;
+	var hpRatio = this.hp / this.hpMax;
+	hpEnd = hpStart + hpDiff * hpRatio;
+
+
+	g_g.ctx.strokeStyle = "#0f0";
+	g_g.ctx.lineWidth = 3;
+	g_g.ctx.beginPath();
+	g_g.ctx.arc(screenX(this.pos.x), screenY(this.pos.y), this.radius + 25,
+		this.dirFacing + hpStart, this.dirFacing + hpEnd, true);
+	g_g.ctx.stroke();*/
+
+
+	g_g.ctx.lineWidth = 1;
 
 
 
@@ -188,45 +235,75 @@ Player.prototype.draw = function() {
 	}
 
 	loopCall(this.bullets, "draw");
+
+
+	// Draw upgrade
+	var difference = new Date().getTime() - this.lastUpgrade;
+	if (difference < this.upgradeDrawTime) {
+		g_g.ctx.globalAlpha = 1 - difference / this.upgradeDrawTime;
+		g_g.ctx.textAlign = "center";
+		g_g.ctx.font = "34px Arial";
+		g_g.ctx.fillStyle = "#f00";
+		g_g.ctx.fillText(this.upgradeName, g_g.canvas.width / 2, g_g.canvas.height / 4);
+	}
+
+	g_g.ctx.globalAlpha = 1.0;
+
 };
 
 
 Player.prototype.radial = function(dir) {
 	var extra = 0;
-	if (randomRange(0, Math.max(2, 100-g_g.glitchness.val*4)) == 0) {
+	var probability = this.hp / this.hpMax;
+	/*if (randomRange(0, Math.max(2, 100-g_g.glitchness.val*4)) == 0) {
 		extra = randomRange(0, 2*(g_g.glitchness.val-1));
 		//console.log(extra);
+		//console.log(extra);
+	}*/
+
+	if (randomRangeReal(0, 1) > probability) {
+		extra = randomRange(0, 2*(1 - probability)*10);
 	}
-	return this.pos.calcMove(this.dir+dir, this.radius + extra);
+
+	return this.pos.calcMove(this.dirFacing+dir, this.radius + extra);
 };
 
 
 Player.prototype.calcInteraction = function(object) {
-	return (this.pos.disTo(object.pos) < this.radius/2 + object.radius);
+	return (this.pos.disTo(object.pos) < this.radius * (3/4) + object.radius);
 };
 
 Player.prototype.shoot = function() {
-	console.log(this.dir);
 	this.bullets.push(new Bullet(
-		this.pos.calcMove(this.dir, this.radius * (3/4)),
-		this.dir, this.bulletSpeed, this.bulletRadius
+		this.pos.calcMove(this.dirFacing, this.radius * (3/4)),
+		this.dirFacing, this.bulletSpeed, this.bulletRadius, this.bulletDamage
 	));
-
-	console.log("Shoot");
 };
 
+Player.prototype.hpDecrease = function(amount) {
+	if (!this.inHit) {
+		this.inHit = true;
+		this.lastHit = new Date().getTime();
+		this.hp -= amount;
+		if (this.hp <= 0)
+			gameOver();
+	}
+};
 
 Player.prototype.upgrade = function() {
 	if (this.upgradeCount == 0) {
 		this.canShoot = true;
-		console.log("CANSHOOT");
+		this.upgradeName = "Shooting enabled";
 	}
 	else {
 		var obj = Player.upgradeList[randomRange(0, Player.upgradeList.length)];
 		obj.func(this);
+		this.upgradeName = obj.name;
 	}
 
+	this.hp = this.hpMax;
 	this.upgradeCount++;
+	this.lastUpgrade = new Date().getTime();
 };
 
 
@@ -237,8 +314,19 @@ Player.upgradeFunction = function(name, func) {
 
 
 Player.upgradeList = [
-	new Player.upgradeFunction("speed", function(obj) {
+	new Player.upgradeFunction("Speed increased", function(obj) {
 		obj.speed += 1;
+		obj.speedRotate += trig.TAU / 60;
+		obj.bulletSpeed += 1;
+	}),
+
+	new Player.upgradeFunction("Damage increased", function(obj) {
+		obj.bulletRadius += 1;
+		obj.bulletDamage += 1;
+	}),
+
+	new Player.upgradeFunction("HP increased", function(obj) {
+		obj.hpMax += 1;
 	})
 ];
 
@@ -246,19 +334,23 @@ Player.upgradeList = [
 
 // Bullet
 
-Bullet = function(pos, dir, speed, radius) {
+Bullet = function(pos, dir, speed, radius, damage) {
 	this.pos    = pos;
 	this.dir    = dir;
 	this.speed  = speed;
 	this.radius = radius;
-	console.log(this.dir);
+	this.damage = damage;
+	this.alive  = true;
 };
 
 Bullet.prototype.update = function() {
-	this.pos.move(this.dir, this.speed);
+	if (!this.alive) return true;
+
+	this.pos.moveDelta(this.dir, this.speed);
 
 	if (!drawing.calcShouldDrawCircle(this.pos.calcSub(g_g.camera), this.radius) ||
 		   checkOutGameBounds(this.pos, this.radius)) {
+		g_g.resetMultiplier();
 		return true;
 	}
 
@@ -269,4 +361,13 @@ Bullet.prototype.draw = function() {
 	drawing.drawCircleForced(this.pos.calcSub(g_g.camera), this.radius);
 	g_g.ctx.fillStyle = "#fff";
 	g_g.ctx.fill();
+};
+
+Bullet.prototype.colliding = function(pos, radius) {
+	if (this.pos.collidingCircles(this.radius, pos, radius)) {
+		this.alive = false;
+		return true;
+	}
+
+	return false;
 };

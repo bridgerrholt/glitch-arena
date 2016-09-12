@@ -1,51 +1,82 @@
 ParticleSystem = function() {
-	this.particles = [];
-	this.count = 100;
-	for (var i = 0; i < this.count; ++i) {
-		this.particles.push(new Particle());
+	this.particlesFront = [];
+	this.particlesBack = [];
+	this.countFront = 20;
+	this.countBack = 80;
+
+	for (var i = 0; i < this.countFront; ++i) {
+		this.pushToFront();
+	}
+
+	for (i = 0; i < this.countBack; ++i) {
+		this.pushToBack();
 	}
 
 	g_g.glitchness.addCallback([ParticleSystem.glitchnessIncrease, this]);
 };
 
 ParticleSystem.prototype.update = function() {
-	loopCall(this.particles, "update");
+	loopCall(this.particlesFront, "update");
+	loopCall(this.particlesBack, "update");
 
-	if (this.particles.length < this.count && randomRange(0, 10) == 0) {
-		this.particles.push(new Particle());
+	if (this.particlesFront.length < this.countFront && randomRange(0, 10) == 0) {
+		this.pushToFront();
+	}
+
+	if (this.particlesBack.length < this.countBack && randomRange(0, 10) == 0) {
+		this.pushToBack();
 	}
 };
 
 ParticleSystem.prototype.draw = function() {
-	loopCall(this.particles, "draw");
+	loopCall(this.particlesBack, "draw");
+};
+
+ParticleSystem.prototype.drawLast = function() {
+	loopCall(this.particlesFront, "draw");
 };
 
 ParticleSystem.prototype.increaseCount = function() {
-	this.count += 50;
+	this.countFront += 2;
+	this.countBack += 8;
 };
 
 ParticleSystem.glitchnessIncrease = function(obj) {
 	obj.increaseCount();
 };
 
+ParticleSystem.prototype.pushToFront = function() {
+	this.particlesFront.push(new Particle(randomRangeReal(1, 2)));
+};
+
+ParticleSystem.prototype.pushToBack = function() {
+	this.particlesBack.push(new Particle(randomRangeReal(0.25, 1)));
+};
+
+
 
 // Particle
 
-Particle = function() {
+Particle = function(distance) {
+	this.distance = distance;
 	this.init();
 };
 
 Particle.prototype.init = function() {
-	this.x = randomRange(0, g_g.canvas.width)  + g_g.camera.x - g_g.canvas.width/2;
-	this.y = randomRange(0, g_g.canvas.height) + g_g.camera.y - g_g.canvas.height/2;
+	this.pos = new trig.Coord(
+		randomRange(0, g_g.canvas.width),
+		randomRange(0, g_g.canvas.height)
+	);
+	this.width = 1;
+	this.height = 1;
 	this.randomSize();
-	this.w = 1;
-	this.h = 1;
 	this.side = randomRange(0, 2);
+
+	var degree = 20;
 	if (this.side == 0)
-		this.bias = randomRange(0, 5);
+		this.bias = randomRange(0, degree);
 	else
-		this.bias = randomRange(96, 101);
+		this.bias = randomRange(101-degree, 101);
 	//console.log(this.bias);
 
 	var colorArray = [0, 0, 0];
@@ -79,46 +110,54 @@ Particle.prototype.init = function() {
 };
 
 Particle.prototype.update = function() {
-	if (randomRange(0, 5000) == 0)
+	if (randomRange(0, 2000 + g_g.glitchness.val*500) == 0)
 		this.randomSize();
+
 	--this.deathTick;
 	if (this.deathTick == 0)
 		this.init();
+
 	if (randomRange(0, 300) == 0) {
-		//if (randomRange(0, 101) < this.bias)
-		if (this.side == 0)
-			this.w += 1;
+		if (randomRange(0, 101) < this.bias)
+		//if (this.side == 0)
+			this.resize(function(){this.width += 1;});
 		else
-			this.h += 1;
+			this.resize(function(){this.height += 1;});
 	}
 };
 
 Particle.prototype.draw = function() {
-	var x = screenX(this.x);
-	var y = screenY(this.y);
+	var pos = this.pos.calcSub(g_g.camera);
+	pos.x *= this.distance;
+	pos.y *= this.distance;
 
-	var width  = this.size * this.w;
-	var height = this.size * this.h;
-
-	while (x + width < 0) {
-		x += g_g.canvas.width + width;
-	}
-	while (x > g_g.canvas.width) {
-		x -= g_g.canvas.width;
-	}
-
-	while (y + height < 0) {
-		y += g_g.canvas.height + height;
-	}
-	while (y > g_g.canvas.height) {
-		y -= g_g.canvas.height;
-	}
+	this.fixPos(pos, 'x', 'fullWidth',  'width');
+	this.fixPos(pos, 'y', 'fullHeight', 'height');
 
 	g_g.ctx.fillStyle = this.color.get();
-	g_g.ctx.fillRect(x, y, this.size*this.w, this.size*this.h);
-	//console.log(this.color);
+	g_g.ctx.fillRect(pos.x, pos.y, this.fullWidth, this.fullHeight);
 };
 
+
+Particle.prototype.fixPos = function(pos, x, length, frameLength) {
+	while (pos[x] <= -this[length]) {
+		pos[x] += g_g.canvas[frameLength];
+	}
+	while (pos[x] >= g_g.canvas[frameLength]) {
+		pos[x] -= g_g.canvas[frameLength];
+	}
+};
+
+
 Particle.prototype.randomSize = function() {
-	this.size = randomRange(2, 3 * (Math.pow(g_g.glitchness.val, 2)));
+	//this.size = randomRange(2, 0.5 * Math.pow(g_g.glitchness.val, 2));
+	this.resize(function() {
+		this.size = randomRange(2, 2 + 4 * g_g.glitchness.val);
+	});
+};
+
+Particle.prototype.resize = function(func) {
+	func.bind(this)();
+	this.fullWidth  = this.size * this.width;
+	this.fullHeight = this.size * this.height;
 };
