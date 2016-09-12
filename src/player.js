@@ -3,9 +3,13 @@ Player = function() {
 	this.radius = 50;
 
 	this.pos = new trig.Coord(0, 0);
-	this.dir = 0;
 	this.dirFacing = 0;
-	this.speed = 6;
+	this.speedMax = 6;
+	this.movements = [
+		new Movement(0, 0)
+	];
+	this.speedInc = 10 / 60;
+	this.speedDec = 10 / 60;
 	this.speedRotate = trig.TAU / 60;
 
 	this.hpMax = 5;
@@ -33,7 +37,7 @@ Player = function() {
 	this.lastShoot = new Date().getTime();
 	this.shootInterval = 500;
 	this.bullets = [];
-	this.bulletSpeed = this.speed+10;
+	this.bulletSpeed = this.speedMax+10;
 	this.bulletRadius = 5;
 	this.bulletDamage = 1;
 
@@ -73,13 +77,26 @@ Player.prototype.update = function() {
 
 
 	if (!g_g.keys[g_g.keyBinds.shift].down)
-		this.dir = this.dirFacing;
+		this.movements[0].dir = this.dirFacing;
 
 
-	this.pos.moveDelta(this.dir, this.speed);
+	for (var i = 0; i < this.movements.length; ++i) {
+		var movement = this.movements[i];
+
+		if (movement.speed < this.speedMax) {
+			movement.speed += this.speedMax * this.speedInc;
+		}
+
+		if (movement.speed > this.speedMax) {
+			movement.speed = this.speedMax;
+		}
+
+		this.pos.moveDelta(movement.dir, movement.speed);
+	}
+
 	stayInGameBounds(this.pos, this.radius);
 
-	for (var i = 0; i < this.bullets.length; ++i) {
+	for (i = 0; i < this.bullets.length; ++i) {
 		if (this.bullets[i].update()) {
 			this.bullets.splice(i, 1);
 		}
@@ -315,7 +332,7 @@ Player.upgradeFunction = function(name, func) {
 
 Player.upgradeList = [
 	new Player.upgradeFunction("Speed increased", function(obj) {
-		obj.speed += 1;
+		obj.speedMax += 1;
 		obj.speedRotate += trig.TAU / 60;
 		obj.bulletSpeed += 1;
 	}),
@@ -370,4 +387,13 @@ Bullet.prototype.colliding = function(pos, radius) {
 	}
 
 	return false;
+};
+
+
+
+// Movement
+
+Movement = function(direction, speed) {
+	this.dir   = direction;
+	this.speed = speed;
 };

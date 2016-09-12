@@ -68,9 +68,11 @@ function main() {
   loadMedia();
 	reset();
 
-	// 0  Instructions
+	// 0  Title screen
 	// 1  Game
 	// 2  Death
+	// 3  Settings
+	// 4  Instructions
 	g_g.screen = 0;
 	g_g.nextScreen = 0;
 
@@ -171,11 +173,12 @@ function update() {
 	var leftTopY = 10;
 	var fontSize = 36;
 
-
+	// Title screen
 	if (g_g.screen == 0) {
 		g_g.titleScreen.draw();
 	}
 
+	// Game
 	else if (g_g.screen == 1) {
 		g_g.particleSystem.draw();
 		g_g.level.draw();
@@ -199,9 +202,12 @@ function update() {
 		g_g.ctx.textBaseline = "top";
 		g_g.ctx.fillText(g_g.score, leftX, leftTopY);
 		leftTopY += fontSize + 5;
-		g_g.ctx.fillText("x " + g_g.multiplier.toString(), leftX, leftTopY);
+		g_g.ctx.fillText(
+			"x " + g_g.multiplier.toString() + " (" + (g_g.nextMultiplier - g_g.currentMultiplierCount) + ")",
+			leftX, leftTopY);
 	}
 
+	// Death
 	else if (g_g.screen == 2) {
 		/*var size = 30;
 		var fontEnd = "px Georgia";
@@ -234,9 +240,7 @@ function update() {
 
 		y += drawResponsiveText(
 			"YOU DIED",
-			x,
-			y,
-			0.5,
+			x, y, 0.5,
 			"Georgia"
 		).size + 40;
 
@@ -244,12 +248,21 @@ function update() {
 
 		drawResponsiveText(
 			"Score: " + g_g.score.toString(),
-			x, y,
-			0.1,
+			x, y, 0.1,
 			"Georgia"
 		);
 
 		g_g.ctx.textBaseline = "top";
+
+	}
+
+	// Settings
+	else if (g_g.screen == 3) {
+
+	}
+
+	// Instructions
+	else if (g_g.screen == 4) {
 
 	}
 
@@ -343,6 +356,7 @@ TitleScreen = function() {
 	this.titleYDesired = 0.25;
 
 	this.done = false;
+	this.toBeDone = false;
 
 	this.buttonTextSize = 34;
 	this.buttonFont = this.buttonTextSize.toString() + "px Arial";
@@ -365,24 +379,21 @@ TitleScreen = function() {
 TitleScreen.prototype.update = function() {
 	if (!this.done) {
 		if (TitleScreen.getActionPressed()) {
-			this.done = true;
+			this.toBeDone = true;
 		}
 
 		if (this.titleY > this.titleYDesired) {
 			this.titleY -= 0.001;
 		}
 		else {
-			this.done = true;
+			this.toBeDone = true;
 		}
 
-		if (this.done)
+		if (this.toBeDone)
 			this.titleY = this.titleYDesired;
 	}
 
 	else {
-		if (TitleScreen.getActionPressed())
-			screenChange(1);
-
 		var y = g_g.canvas.height * (2/3);
 		var middleX = g_g.canvas.width / 2;
 		var marginX = 0.01;
@@ -399,6 +410,22 @@ TitleScreen.prototype.update = function() {
 			this.buttons[i].rect.pos.y = y;
 			this.buttons[i].rect.width = this.buttonWidth + 2*paddingX;
 			this.buttons[i].rect.height = heights + 2*paddingY;
+			this.buttons[i].update();
+		}
+
+		if (g_g.mouseButtons.left.pressed) {
+			if (this.buttons[0].hover) {
+				screenChange(3);
+			}
+			else if (this.buttons[2].hover) {
+				screenChange(4);
+			}
+			else {
+				screenChange(1);
+			}
+		}
+		else if (TitleScreen.getActionPressed()) {
+			screenChange(1);
 		}
 	}
 };
@@ -418,18 +445,28 @@ TitleScreen.prototype.draw = function() {
 	);
 
 
-	g_g.ctx.strokeStyle = "#fff";
-	g_g.ctx.fillStyle = "#fff";
-	g_g.ctx.font = this.buttonFont;
-	for (var i = 0; i < this.buttons.length; ++i) {
-		var button = this.buttons[i];
-		var rect = button.rect;
-		g_g.ctx.strokeRect(rect.pos.x, rect.pos.y, rect.width, rect.height);
-		g_g.ctx.fillText(button.text,
-			rect.pos.x + rect.width/2, rect.pos.y + rect.height/2);
+	if (this.done) {
+		g_g.ctx.fillStyle = "#fff";
+		g_g.ctx.font = this.buttonFont;
+		for (var i = 0; i < this.buttons.length; ++i) {
+			var button = this.buttons[i];
+			var rect = button.rect;
+
+			if (button.hover)
+				g_g.ctx.strokeStyle = "#0f0";
+			else
+				g_g.ctx.strokeStyle = "#fff";
+
+			g_g.ctx.strokeRect(rect.pos.x, rect.pos.y, rect.width, rect.height);
+			g_g.ctx.fillText(button.text,
+				rect.pos.x + rect.width  / 2,
+				rect.pos.y + rect.height / 2);
+		}
+
+		g_g.ctx.textBaseline = "top";
 	}
 
-	g_g.ctx.textBaseline = "top";
+	else if (this.toBeDone) this.done = true;
 
 };
 
@@ -450,10 +487,14 @@ TitleScreen.getActionPressed = function() {
 Button = function(text) {
 	this.text = text;
 	this.rect = new trig.Rect(new trig.Coord(0, 0), 0, 0);
+	this.hover = false;
 };
 
 Button.prototype.update = function() {
-
+	this.hover = (
+		g_g.mouse.x >= this.rect.pos.x && g_g.mouse.x < this.rect.pos.x + this.rect.width &&
+		g_g.mouse.y >= this.rect.pos.y && g_g.mouse.y < this.rect.pos.y + this.rect.height
+	);
 };
 
 
