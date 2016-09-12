@@ -8,8 +8,8 @@ Player = function() {
 	this.movements = [
 		new Movement(0, 0)
 	];
-	this.speedInc = 10 / 60;
-	this.speedDec = 10 / 60;
+	this.speedInc = 10 / 60 / 5;
+	this.speedDec = 10 / 60 / 5;
 	this.speedRotate = trig.TAU / 60;
 
 	this.hpMax = 5;
@@ -75,20 +75,42 @@ Player.prototype.update = function() {
 		}
 	}
 
+	if (g_g.keys[g_g.keyBinds.shift].released) {
+		this.movements.splice(0, 0, new Movement(this.dirFacing, 0));
+		console.log(this.movements[0].dir);
+	}
 
 	if (!g_g.keys[g_g.keyBinds.shift].down)
 		this.movements[0].dir = this.dirFacing;
 
 
+
+
 	for (var i = 0; i < this.movements.length; ++i) {
 		var movement = this.movements[i];
 
-		if (movement.speed < this.speedMax) {
-			movement.speed += this.speedMax * this.speedInc;
-		}
+		if (i == 0) {
+			if (movement.speed < this.speedMax) {
+				movement.speed += this.speedMax * this.speedInc;
+			}
 
-		if (movement.speed > this.speedMax) {
-			movement.speed = this.speedMax;
+			if (movement.speed > this.speedMax) {
+				movement.speed = this.speedMax;
+			}
+		}
+		else {
+			if (movement.speed > 0) {
+				movement.speed -= this.speedMax * this.speedDec;
+			}
+
+			if (movement.speed <= 0) {
+				console.log(i)
+				this.movements.pop(i, 1);
+				i--;
+				continue;
+			}
+
+			console.log(movement.speed);
 		}
 
 		this.pos.moveDelta(movement.dir, movement.speed);
