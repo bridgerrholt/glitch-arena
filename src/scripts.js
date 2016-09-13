@@ -24,7 +24,9 @@ function main() {
 	}
 	g_g.keyBinds = {
 		spacebar: 32,
-		shift: 16
+		shift: 16,
+		escape: 27,
+		key_p: 80
 	};
 
   g_g.glitchness = {
@@ -62,24 +64,44 @@ function main() {
   }, false);
   //audioEncoder.audio.play();
 
+	var highScoreCookie = getCookie("high-score");
+	if (highScoreCookie == '') {
+		g_g.highScore = 0;
+		document.cookie = "high-score=0";
+	}
+	else {
+		g_g.highScore = parseInt(highScoreCookie);
+	}
+
 
   // Sets up everything.
   setInputCallbacks();
   loadMedia();
-	reset();
 
 	// 0  Title screen
 	// 1  Game
 	// 2  Death
 	// 3  Settings
 	// 4  Instructions
-	g_g.screen = 0;
-	g_g.nextScreen = 0;
+	// 5  Pause
+	// 6  Warning
+	g_g.screen = 6;
+	g_g.nextScreen = 6;
+
+	g_g.warningStart = new Date().getTime();
+	g_g.warningLength = 5000;
 
 	g_g.titleScreen = new TitleScreen();
 
 	g_g.startingMultiplier = 3;
 	g_g.nextMultiplier = g_g.startingMultiplier;
+
+	g_g.instructions = {};
+	g_g.settings = new Settings();
+
+
+
+	reset();
 
 
   // Sets up the game loop.
@@ -90,13 +112,17 @@ function main() {
 
 function screenChange(value) {
 	g_g.nextScreen = value;
+
+	if (g_g.nextScreen == 4) {
+		g_g.instructions = new Instructions();
+	}
 }
 
 function screenFinalize() {
 	g_g.screen = g_g.nextScreen;
 }
 
-function drawResponsiveText(text, x, y, widthRatio, fontName) {
+function calcText(text, widthRatio, fontName) {
 	var size = 12;
 	var fontEnd = "px " + fontName;
 	g_g.ctx.font = size.toString() + fontEnd;
@@ -105,11 +131,17 @@ function drawResponsiveText(text, x, y, widthRatio, fontName) {
 
 	size = sizeToWidth * g_g.canvas.width * widthRatio;
 
-	g_g.ctx.font = size.toString() + fontEnd;
+	return { width: width, size: size};
+}
+
+function drawResponsiveText(text, x, y, widthRatio, fontName) {
+	var data = calcText(text, widthRatio, fontName);
+
+	g_g.ctx.font = data.size.toString() + "px " + fontName;
 
 	g_g.ctx.fillText(text, x, y);
 
-	return { width: width, size: size};
+	return data;
 }
 
 
@@ -131,7 +163,7 @@ function reset() {
 
 function update() {
 	g_g.thisTick = new Date().getTime();
-	g_g.fps = 1000/(g_g.thisTick-g_g.lastTick);
+	g_g.fps = 1000 / (g_g.thisTick-g_g.lastTick);
 	if (g_g.fps == 0)
 		g_g.delta = 0;
 	else
@@ -141,11 +173,16 @@ function update() {
 	g_g.averageFps = (g_g.averageFps * smoothing) + (g_g.fps * (1.0-smoothing));
 
 	// Update
+
+	// Title Screen
 	if (g_g.screen == 0) {
 		g_g.titleScreen.update();
 	}
 
+	// Game
 	else if (g_g.screen == 1) {
+		if (g_g.keyPause())
+			screenChange(5);
 		g_g.player.update();
 		g_g.camera.x = g_g.player.pos.x - g_g.canvas.width/2;
 		g_g.camera.y = g_g.player.pos.y - g_g.canvas.height/2;
@@ -155,11 +192,34 @@ function update() {
 
 	}
 
+	// Death
 	else if (g_g.screen == 2) {
 		if (new Date().getTime() > g_g.gameOverTime + 1500 && TitleScreen.getActionPressed()) {
 			screenChange(1);
 			reset();
 		}
+	}
+
+	// Settings
+	else if (g_g.screen == 3) {
+		g_g.settings.update();
+	}
+
+	// Instructions
+	else if (g_g.screen == 4) {
+		g_g.instructions.update();
+	}
+
+	// Pause
+	else if (g_g.screen == 5) {
+		g_g.titleScreen.update();
+	}
+
+	// Warning
+	else if (g_g.screen == 6) {
+		var time = new Date().getTime() - g_g.warningStart;
+		if (time > g_g.warningLength || (time > 1000 && TitleScreen.getActionPressed()))
+			screenChange(0);
 	}
 
 
@@ -205,6 +265,11 @@ function update() {
 		g_g.ctx.fillText(
 			"x " + g_g.multiplier.toString() + " (" + (g_g.nextMultiplier - g_g.currentMultiplierCount) + ")",
 			leftX, leftTopY);
+
+		g_g.ctx.fillStyle = "#f00";
+		g_g.ctx.font = "30px Arial";
+		g_g.ctx.textAlign = "right";
+		g_g.ctx.fillText("Level " + g_g.glitchness.val.toString(), g_g.canvas.width - 45, 40);
 	}
 
 	// Death
@@ -246,11 +311,23 @@ function update() {
 
 		g_g.ctx.fillStyle = "#fff";
 
-		drawResponsiveText(
-			"Score: " + g_g.score.toString(),
-			x, y, 0.1,
-			"Georgia"
-		);
+		y += drawResponsiveText(
+				"Score: " + g_g.score.toString(),
+				x, y, 0.15,
+				"Arial"
+		).size + 40;
+
+		y += drawResponsiveText(
+			"Level: " + g_g.glitchness.val.toString(),
+			x, y, 0.15,
+			"Arial"
+		).size + 40;
+
+		y += drawResponsiveText(
+			"High Score: " + g_g.highScore.toString(),
+			x, y, 0.125,
+			"Arial"
+		).size + 40;
 
 		g_g.ctx.textBaseline = "top";
 
@@ -258,12 +335,37 @@ function update() {
 
 	// Settings
 	else if (g_g.screen == 3) {
-
+		g_g.settings.draw();
 	}
 
 	// Instructions
 	else if (g_g.screen == 4) {
+		g_g.instructions.draw();
+	}
 
+	// Pause
+	else if (g_g.screen == 5) {
+		g_g.titleScreen.draw();
+	}
+
+	// Warning
+	else if (g_g.screen == 6) {
+		g_g.ctx.fillStyle = "#fff";
+		g_g.ctx.textAlign = "center";
+
+		g_g.ctx.globalAlpha = 1 - (new Date().getTime() - g_g.warningStart) / (g_g.warningLength);
+
+		console.log(g_g.ctx.globalAlpha);
+
+		drawResponsiveText(
+			"Do not play if you have a history of epilepsy",
+			g_g.canvas.width / 2,
+			g_g.canvas.height / 2,
+			0.3,
+			"Georgia"
+		);
+
+		g_g.ctx.globalAlpha = 1;
 	}
 
 
@@ -283,13 +385,6 @@ function update() {
 	}
 
 
-	if (g_g.screen != 0) {
-		g_g.ctx.fillStyle = "#f00";
-		g_g.ctx.font = "30px Arial";
-		g_g.ctx.textAlign = "right";
-		g_g.ctx.fillText("Level " + g_g.glitchness.val.toString(), g_g.canvas.width - 45, 40);
-	}
-
 	// End drawing
 	// Keys
 	g_g.mouseButtons.left.update();
@@ -305,6 +400,10 @@ function update() {
 function gameOver() {
 	screenChange(2);
 	g_g.gameOverTime = new Date().getTime();
+	if (g_g.score > g_g.highScore) {
+		g_g.highScore = g_g.score;
+		document.cookie = "high-score=" + g_g.score.toString();
+	}
 }
 
 
@@ -348,157 +447,6 @@ function checkOutGameBounds(coord, radius) {
 }
 
 
-
-// TitleScreen
-
-TitleScreen = function() {
-	this.titleY = 0.5;
-	this.titleYDesired = 0.25;
-
-	this.done = false;
-	this.toBeDone = false;
-
-	this.buttonTextSize = 34;
-	this.buttonFont = this.buttonTextSize.toString() + "px Arial";
-	this.buttons = [
-		new Button("Settings"),
-		new Button("Play"),
-		new Button("Instructions")
-	];
-
-	g_g.ctx.font = this.buttonFont;
-	this.buttonWidth = this.calcButtonText(0).width;
-	for (var i = 1; i < this.buttons.length; ++i) {
-		var width = this.calcButtonText(i);
-		if (width > this.buttonWidth)
-			this.buttonWidth = width;
-	}
-};
-
-
-TitleScreen.prototype.update = function() {
-	if (!this.done) {
-		if (TitleScreen.getActionPressed()) {
-			this.toBeDone = true;
-		}
-
-		if (this.titleY > this.titleYDesired) {
-			this.titleY -= 0.001;
-		}
-		else {
-			this.toBeDone = true;
-		}
-
-		if (this.toBeDone)
-			this.titleY = this.titleYDesired;
-	}
-
-	else {
-		var y = g_g.canvas.height * (2/3);
-		var middleX = g_g.canvas.width / 2;
-		var marginX = 0.01;
-		var unit = g_g.canvas.width * 0.05;
-		var heights = this.buttonTextSize;
-		var paddingX = 4;
-		var paddingY = 8;
-
-		this.buttons[0].rect.pos.x = middleX - this.buttonWidth * 2 - paddingX * 3;
-		this.buttons[1].rect.pos.x = middleX - this.buttonWidth * (1/2) - paddingX;
-		this.buttons[2].rect.pos.x = middleX + this.buttonWidth * (2/2) + paddingX;
-
-		for (var i = 0; i < this.buttons.length; ++i) {
-			this.buttons[i].rect.pos.y = y;
-			this.buttons[i].rect.width = this.buttonWidth + 2*paddingX;
-			this.buttons[i].rect.height = heights + 2*paddingY;
-			this.buttons[i].update();
-		}
-
-		if (g_g.mouseButtons.left.pressed) {
-			if (this.buttons[0].hover) {
-				screenChange(3);
-			}
-			else if (this.buttons[2].hover) {
-				screenChange(4);
-			}
-			else {
-				screenChange(1);
-			}
-		}
-		else if (TitleScreen.getActionPressed()) {
-			screenChange(1);
-		}
-	}
-};
-
-
-TitleScreen.prototype.draw = function() {
-	g_g.ctx.fillStyle = "#fff";
-	g_g.ctx.textAlign = "center";
-	g_g.ctx.textBaseline = "middle";
-
-	drawResponsiveText(
-		"GLITCH ARENA",
-		g_g.canvas.width / 2,
-		g_g.canvas.height * this.titleY,
-		0.5,
-		"Arial Black"
-	);
-
-
-	if (this.done) {
-		g_g.ctx.fillStyle = "#fff";
-		g_g.ctx.font = this.buttonFont;
-		for (var i = 0; i < this.buttons.length; ++i) {
-			var button = this.buttons[i];
-			var rect = button.rect;
-
-			if (button.hover)
-				g_g.ctx.strokeStyle = "#0f0";
-			else
-				g_g.ctx.strokeStyle = "#fff";
-
-			g_g.ctx.strokeRect(rect.pos.x, rect.pos.y, rect.width, rect.height);
-			g_g.ctx.fillText(button.text,
-				rect.pos.x + rect.width  / 2,
-				rect.pos.y + rect.height / 2);
-		}
-
-		g_g.ctx.textBaseline = "top";
-	}
-
-	else if (this.toBeDone) this.done = true;
-
-};
-
-
-TitleScreen.prototype.calcButtonText = function(index) {
-	return g_g.ctx.measureText(this.buttons[index]);
-};
-
-
-TitleScreen.getActionPressed = function() {
-	return (g_g.keys[g_g.keyBinds.spacebar].pressed || g_g.mouseButtons.left.pressed);
-};
-
-
-
-// Button
-
-Button = function(text) {
-	this.text = text;
-	this.rect = new trig.Rect(new trig.Coord(0, 0), 0, 0);
-	this.hover = false;
-};
-
-Button.prototype.update = function() {
-	this.hover = (
-		g_g.mouse.x >= this.rect.pos.x && g_g.mouse.x < this.rect.pos.x + this.rect.width &&
-		g_g.mouse.y >= this.rect.pos.y && g_g.mouse.y < this.rect.pos.y + this.rect.height
-	);
-};
-
-
-
 // Common
 
 RgbColor = function(r, g, b) {
@@ -526,6 +474,23 @@ function loopCall(arr, functionName) {
   for (var i = 0; i < arr.length; ++i) {
     arr[i][functionName]();
   }
+}
+
+function getCookie(name) {
+	name += "=";
+	var ca = document.cookie.split(';');
+
+	for (var i = 0; i < ca.length; i++) {
+		var c = ca[i];
+		while (c.charAt(0) == ' ') {
+			c = c.substring(1);
+		}
+		if (c.indexOf(name) == 0) {
+			return c.substring(name.length,c.length);
+		}
+	}
+
+	return "";
 }
 
 
@@ -557,7 +522,7 @@ g_g.increaseScore = function(value) {
 };
 
 g_g.increaseScorePure = function(value) {
-	g_g.score += value;
+	g_g.score += value * g_g.settings.options.difficulty.current;
 };
 
 
@@ -593,6 +558,9 @@ function getMouseButtonIsLeft(num) {
 }
 
 
+g_g.keyPause = function() {
+	return (g_g.keys[g_g.keyBinds.escape].pressed || g_g.keys[g_g.keyBinds.key_p].pressed);
+};
 
 function setInputCallbacks() {
 	document.addEventListener("mousemove", function (evt) {

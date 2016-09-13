@@ -19,7 +19,7 @@ EnemySystem.prototype.draw = function() {
 EnemySystem.prototype.spawn = function(level) {
 	for (var i = 0; i < level.objects.length; ++i) {
 		var obj = level.objects[i];
-		var degree = g_g.glitchness.val - 1;
+		var degree = Math.floor(g_g.glitchness.val - 1 + 0.2*Math.pow(g_g.settings.options.difficulty.current, 2));
 
 		var maxInc;
 		if (obj.getTag() == "orb")
@@ -33,17 +33,17 @@ EnemySystem.prototype.spawn = function(level) {
 			this.enemies.push(new Enemy(
 				obj,
 				// guardRadius
-				500 + randomRange(0, degree*10),
+				500 + randomRange(0, degree*5),
 				// awareness
-				500 + randomRange(0, degree*50),
+				500 + randomRange(0, degree*25),
 				// radius
 				25  + degree,
 				// speed
-				4   + randomRangeReal(0, degree),
+				4   + randomRangeReal(0, degree/2),
 				// damage
-				1   + randomRange(0, degree * .8),
+				1   + randomRange(0, degree * .4),
 				// hp
-				1   + randomRange(0, degree * .6))
+				1   + randomRange(0, degree * .3))
 			);
 		}
 	}

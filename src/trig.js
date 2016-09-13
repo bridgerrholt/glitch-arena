@@ -76,6 +76,13 @@ trig.Rect = function(position, width, height) {
 	this.height = height;
 };
 
+trig.Rect.prototype.getIfHover = function(coord) {
+	return (
+		coord.x >= this.pos.x && coord.x < this.pos.x + this.width &&
+		coord.y >= this.pos.y && coord.y < this.pos.y + this.height
+	);
+};
+
 
 // Conversions
 trig.toRads = function(degrees) {

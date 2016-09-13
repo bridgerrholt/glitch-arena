@@ -1,8 +1,8 @@
 ParticleSystem = function() {
 	this.particlesFront = [];
 	this.particlesBack = [];
-	this.countFront = 20;
-	this.countBack = 80;
+	this.countFront = 7;
+	this.countBack = 26;
 
 	for (var i = 0; i < this.countFront; ++i) {
 		this.pushToFront();
@@ -19,12 +19,24 @@ ParticleSystem.prototype.update = function() {
 	loopCall(this.particlesFront, "update");
 	loopCall(this.particlesBack, "update");
 
-	if (this.particlesFront.length < this.countFront && randomRange(0, 10) == 0) {
+	var particles = g_g.settings.options.particles.current;
+	var frontCount = this.countFront * particles;
+	var backCount = this.countFront * particles;
+
+	var frontDiff = this.particlesFront.length - frontCount;
+	if (frontDiff < 0 && randomRange(0, 10) == 0) {
 		this.pushToFront();
 	}
+	else if (frontDiff > 0) {
+		this.particlesFront.splice(-1, frontDiff);
+	}
 
-	if (this.particlesBack.length < this.countBack && randomRange(0, 10) == 0) {
+	var backDiff = this.particlesBack.length - backCount;
+	if (backDiff < 0 && randomRange(0, 10) == 0) {
 		this.pushToBack();
+	}
+	else if (backDiff > 0) {
+		this.particlesBack.splice(-1, backDiff);
 	}
 };
 
@@ -37,8 +49,10 @@ ParticleSystem.prototype.drawLast = function() {
 };
 
 ParticleSystem.prototype.increaseCount = function() {
-	this.countFront += 2;
-	this.countBack += 8;
+	if (g_g.settings.options.particles.current > 1) {
+		this.countFront += 1;
+		this.countBack += 2;
+	}
 };
 
 ParticleSystem.glitchnessIncrease = function(obj) {

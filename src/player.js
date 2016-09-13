@@ -104,13 +104,10 @@ Player.prototype.update = function() {
 			}
 
 			if (movement.speed <= 0) {
-				console.log(i)
 				this.movements.pop(i, 1);
 				i--;
 				continue;
 			}
-
-			console.log(movement.speed);
 		}
 
 		this.pos.moveDelta(movement.dir, movement.speed);
