@@ -77,7 +77,7 @@ Player.prototype.update = function() {
 
 	if (g_g.keys[g_g.keyBinds.shift].released) {
 		this.movements.splice(0, 0, new Movement(this.dirFacing, 0));
-		console.log(this.movements[0].dir);
+		//console.log(this.movements[0].dir);
 	}
 
 	if (!g_g.keys[g_g.keyBinds.shift].down)

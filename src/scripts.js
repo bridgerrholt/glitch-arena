@@ -57,12 +57,29 @@ function main() {
     }
   };
 
-  var audioEncoder = new AudioEncoder(132/16./4, ['C4:16 C4:16 Eb4:16 E4:16 G3:16 G3:16 G3:16 G3:16 D4:16 D4:16 F4:16 F4:16 G3:16 G3:16 G3:16 G3:16 Eb4:16 E4:16 G4:16 G4:16 Ab4:16 G4:16 A4:16 G4:16 A4:16 G4:16 A4:16 G4:16 Bb4:16 G4:16 E4:16 D4:16']);
-  audioEncoder.audio.addEventListener('ended', function() {
-      this.currentTime = 0;
-      this.play();
-  }, false);
-  //audioEncoder.audio.play();
+	g_g.audioContext = new AudioContext();
+		// set the tempo
+	var tempo = 100,
+		// create an array of "note strings" that can be passed to a sequence
+		lead = [
+			'C4 s', 'C4 s', 'Eb4 s', 'E4 s', 'G3 s', 'G3 s', 'G3 s', 'G3 s', 'D4 s', 'D4 s', 'F4 s', 'F4 s', 'G3 s', 'G3 s', 'G3 s', 'G3 s', 'Eb4 s', 'E4 s', 'G4 s', 'G4 s', 'Ab4 s', 'G4 s', 'A4 s', 'G4 s', 'A4 s', 'G4 s', 'A4 s', 'G4 s', 'Bb4 s', 'G4 s', 'E4 s', 'D4 s'
+		];
+
+	// create 3 new sequences (one for lead, one for harmony, one for bass)
+	g_g.music = new TinyMusic.Sequence(g_g.audioContext, tempo, lead);
+
+	// set staccato and smoothing values for maximum coolness
+	g_g.music.staccato = 0.55;
+
+	// adjust the levels so the bass and harmony aren't too loud
+	g_g.music.gain.gain.value = 1.0;
+
+	// apply EQ settings
+	g_g.music.mid.frequency.value = 800;
+	g_g.music.mid.gain.value = 3;
+
+	g_g.playingMusic = false;
+
 
 	var highScoreCookie = getCookie("high-score");
 	if (highScoreCookie == '') {
@@ -176,6 +193,10 @@ function update() {
 
 	// Title Screen
 	if (g_g.screen == 0) {
+		if (!g_g.playingMusic) {
+			g_g.music.play(g_g.audioContext.currentTime);
+			g_g.playingMusic = true;
+		}
 		g_g.titleScreen.update();
 	}
 
@@ -355,7 +376,7 @@ function update() {
 
 		g_g.ctx.globalAlpha = 1 - (new Date().getTime() - g_g.warningStart) / (g_g.warningLength);
 
-		console.log(g_g.ctx.globalAlpha);
+		//console.log(g_g.ctx.globalAlpha);
 
 		drawResponsiveText(
 			"Do not play if you have a history of epilepsy",
@@ -504,8 +525,8 @@ g_g.enemyKilled = function() {
 		g_g.multiplier++;
 	}
 
-	console.log("enemyKilled");
-	console.log(g_g.currentMultiplierCount);
+	//console.log("enemyKilled");
+	//console.log(g_g.currentMultiplierCount);
 };
 
 g_g.resetMultiplier = function() {
@@ -513,11 +534,11 @@ g_g.resetMultiplier = function() {
 	g_g.nextMultiplier = g_g.startingMultiplier;
 	g_g.currentMultiplierCount = 0;
 
-	console.log("reset");
+	//console.log("reset");
 };
 
 g_g.increaseScore = function(value) {
-	console.log(value * g_g.multiplier);
+	//console.log(value * g_g.multiplier);
 	g_g.increaseScorePure(value * g_g.multiplier);
 };
 

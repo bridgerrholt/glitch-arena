@@ -180,9 +180,12 @@ Instructions = function() {
 		"Your character follows the mouse.",
 		"Hold shift to aim away from your traveling direction.",
 		"Travel toward the keys (highlighted in pink) to collect them,",
-		"Once you have all the keys, travel to the orb (indicated as a star).",
+		"once you have all the keys, travel to the orb (indicated as a star).",
 		"Enemies will attack you, once you get the first orb you can",
-		"shoot at them by clicking or pressing space."
+		"shoot at them by clicking or pressing space.",
+		"The top left number is your score and the number under it is your multiplier,",
+		"kill enemies without missing to increase it.",
+		"Press P or ESC to pause."
 	];
 	this.font = "Georgia";
 	this.size = 0;
@@ -246,6 +249,8 @@ Instructions.prototype.draw = function() {
 	for (var i = 0; i < this.text.length; ++i) {
 		g_g.ctx.fillText(this.text[i], x, this.yInc());
 	}
+
+	g_g.ctx.textAlign = "center";
 
 	g_g.ctx.font = this.buttonSize.toString() + "px Georgia";
 	this.button.draw();
